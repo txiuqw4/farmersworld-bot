@@ -1,0 +1,9 @@
+{
+    "TIMEZONE": "Asia/Ho_Chi_Minh",
+    "REPAIR_IF_DURABILITY_LOWER": 10,
+    "RECOVER_IF_ENERGY_LOWER": 10,
+    "MAX_ENERGY": 500,
+    "MINIMUM_FEE": 5,
+    "MINIMUN_WITHDRAW": 10,
+    "PAYBW": false
+}
