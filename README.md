@@ -13,13 +13,21 @@ npm install
 ```
 
 3. Config your farmersworld account
-- copy account.json.example file
+- copy accounts.json.example file
 ```js
-cp account.json.example account.json
+cp accounts.json.example accounts.json
 ```
-- edit account.json file
+- edit accounts.json file
+```json
+[
+    {
+        "wallet": "your wax wallet",
+        "privateKey": "active key"
+    }
+]
+```
 #### Note:
-- only work with accounts has active key, so create your account with [anchor wallet](https://greymass.com/anchor/)
+- It doesn't work with accounts that managed by [WAX Cloud Wallet](https://wallet.wax.io/). So, You should be use [anchor wallet](https://greymass.com/anchor/) to create your account.
 ## Run
 - run command then open http://localhost:3000 and enjoy it
 ```js

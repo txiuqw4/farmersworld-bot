@@ -274,7 +274,40 @@ async function anotherTask(tools, paybw = null) {
     }
 }
 
-export default async function main() {
+async function main(paybw) {
+    let nextClaim = Math.floor(Date.now() / 1000 + MAX_DELAY);
+    let tools = [];
+
+    for (const account of accounts) {
+        try {
+            const result = await claim(account, paybw);
+
+            if (nextClaim > result.nextAvailability) {
+                nextClaim = result.nextAvailability;
+            }
+
+            tools = tools.concat(result.tools);
+        } catch (e) {
+            // an error occus
+            console.log("[Error] -", e);
+            nextClaim = Math.floor(Date.now() / 1000) + 1;
+        }
+    }
+
+    await anotherTask(tools, paybw);
+
+    console.log(
+        "Next claim at",
+        new Date(nextClaim * 1000).toLocaleString("en-US", {
+            timeZoneName: "short",
+            timeZone: TIMEZONE,
+        })
+    );
+
+    await countdown(nextClaim - Math.floor(Date.now() / 1000));
+}
+
+export default async function() {
     let paybw = null;
     if (PAYBW) {
         paybw = require("./paybw.json");
@@ -283,35 +316,8 @@ export default async function main() {
     console.log("working...");
 
     while (true) {
-        let nextClaim = Math.floor(Date.now() / 1000 + MAX_DELAY);
-        let tools = [];
-
-        for (const account of accounts) {
-            try {
-                const result = await claim(account, paybw);
-
-                if (nextClaim > result.nextAvailability) {
-                    nextClaim = result.nextAvailability;
-                }
-
-                tools = tools.concat(result.tools);
-            } catch (e) {
-                // an error occus
-                console.log("[Error] -", e);
-                nextClaim = Math.floor(Date.now() / 1000) + 1;
-            }
-        }
-
-        console.log(
-            "Next claim at",
-            new Date(nextClaim * 1000).toLocaleString("en-US", {
-                timeZoneName: "short",
-                timeZone: TIMEZONE,
-            })
-        );
-
-        await anotherTask(tools, paybw);
-        const remainSeconds = nextClaim - Math.floor(Date.now() / 1000);
-        await countdown(remainSeconds);
+        try {
+            await main(paybw);
+        } catch {}
     }
 }
