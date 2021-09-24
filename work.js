@@ -135,6 +135,7 @@ async function claim(account, paybw) {
             tools.push({
                 assetId: row.asset_id,
                 currentDurability: row.current_durability,
+                durability: row.durability,
                 ...account,
             });
         if (row.current_durability === 0) continue;
@@ -169,10 +170,10 @@ async function claim(account, paybw) {
                 paybw
             );
 
+            await delay(1000);
+
             const reward = await logClaim(result.transaction_id);
             console.log("Log claim", reward);
-
-            await delay(500);
         }
 
         await delay(1000);
@@ -228,7 +229,7 @@ async function anotherTask(tools, paybw = null) {
         // TASK: repair
         for (const tool of tools) {
             const gold = await fetchBalanceOf(tool.wallet, "GOLD");
-            const consumed = (250 - tool.currentDurability) / 5;
+            const consumed = (tool.durability - tool.currentDurability) / 5;
             console.log("Repair", tool.assetId, "gold consumed", consumed);
             if (gold >= consumed) await repair(tool, paybw);
             else console.log("Not enough gold to repair.");
@@ -307,7 +308,7 @@ async function main(paybw) {
     await countdown(nextClaim - Math.floor(Date.now() / 1000));
 }
 
-export default async function() {
+export default async function () {
     let paybw = null;
     if (PAYBW) {
         paybw = require("./paybw.json");
