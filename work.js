@@ -8,7 +8,7 @@ const MAX_DELAY = 3600; // 1 hour
 const {
     REPAIR_IF_DURABILITY_LOWER,
     RECOVER_IF_ENERGY_LOWER,
-    MAX_ENERGY,
+    LOWEST_ENERGY,
     PAYBW,
     MINIMUM_FEE,
     MINIMUN_WITHDRAW,
@@ -131,7 +131,7 @@ async function claim(account, paybw) {
     let assetIds = [];
 
     for (const row of data.rows) {
-        if (row.current_durability < REPAIR_IF_DURABILITY_LOWER)
+        if (row.current_durability <= REPAIR_IF_DURABILITY_LOWER)
             tools.push({
                 assetId: row.asset_id,
                 currentDurability: row.current_durability,
@@ -240,16 +240,21 @@ async function anotherTask(tools, paybw = null) {
         const fwAccounts = await syncAccounts();
 
         for (const account of fwAccounts) {
-            if (account.energy < RECOVER_IF_ENERGY_LOWER) {
-                const energy = MAX_ENERGY - account.energy;
-                const consumed = energy * 5;
+            if (account.energy <= RECOVER_IF_ENERGY_LOWER) {
+                let energy = account.max_energy - account.energy;
+                let consumed = energy / 5;
                 const food = parseBalance(
                     account.balances.find((r) =>
                         r.toUpperCase().endsWith("FOOD")
                     )
                 );
 
-                if (food > consumed) {
+                if (account.energy <= LOWEST_ENERGY && food < consumed) {
+                    consumed = Math.floor(food);
+                    energy = consumed * 5;
+                }
+
+                if (food >= consumed) {
                     console.log("Recover", account.wallet, energy, "energy");
                     await recover(account, energy, paybw);
                 } else {
