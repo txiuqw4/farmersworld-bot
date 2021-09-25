@@ -56,6 +56,8 @@ async function getHeader() {
                 account.wallet
             }</font> ${data.rows[0].balances.join(" - ")}`
         );
+
+        headers.push(`<p style="margin-top:2px;">energy: ${data.rows[0].energy}/${data.rows[0].max_energy}</p>`);
     }
 
     headers = headers.map((r) =>
