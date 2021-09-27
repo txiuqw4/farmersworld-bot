@@ -275,28 +275,28 @@ async function main(paybw) {
     let tools = await fetchTools();
     logDurability(tools);
 
-    let claimable = getClaimableTools(tools);
-    for (const tool of claimable) {
-        await makeMine(tool, paybw);
-        await delay(1000);
-    }
-
     const repairTools = getRepairTools(tools);
     await anotherTask(repairTools, paybw);
 
     const nextClaim = calcNextClaim(tools);
     const difftime = Math.ceil(nextClaim - Date.now() / 1000);
-    if (difftime <= 0) return main(paybw);
+    if (difftime > 0) {
+        console.log(
+            "Next claim at",
+            new Date(nextClaim * 1000).toLocaleString("en-US", {
+                timeZoneName: "short",
+                timeZone: TIMEZONE,
+            })
+        );
 
-    console.log(
-        "Next claim at",
-        new Date(nextClaim * 1000).toLocaleString("en-US", {
-            timeZoneName: "short",
-            timeZone: TIMEZONE,
-        })
-    );
+        await countdown(difftime);
+    }
 
-    await countdown(difftime);
+    let claimable = getClaimableTools(tools);
+    for (const tool of claimable) {
+        await makeMine(tool, paybw);
+        await delay(1000);
+    }
 }
 
 export default async function () {
