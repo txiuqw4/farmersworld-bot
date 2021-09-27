@@ -120,6 +120,7 @@ async function fetchTools() {
     let tools = [];
 
     for (const account of accounts) {
+        console.log("run with wallet", account.wallet);
         const data = await queryData(account.wallet);
         tools = tools.concat(
             data
