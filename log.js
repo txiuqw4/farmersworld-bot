@@ -1,6 +1,6 @@
 const orgLog = console.log;
 const logs = [];
-const MAX_LINES = 100;
+const MAX_LINES = 200;
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const { TIMEZONE } = require("./config.json");

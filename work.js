@@ -1,6 +1,7 @@
 import query from "./service/wax-query.js";
 import historyTransaction from "./service/wax-transaction.js";
 import { mine, repair, recover, withdraw } from "./farmersworld.js";
+import { toCamelCase } from "./utils.js";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const accounts = require("./accounts.json");
@@ -111,78 +112,67 @@ async function getAccount(wallet) {
 }
 
 /*
- * Make claim
+ * Fetch tools from contract
  *
- * @param account object
- * @param paybw object
- *
- * @return object {nextAvailability: number, tools: Array{assetId: string, wallet: string, privateKey: string, currentDurability: number}}
+ * @return Array
  */
-async function claim(account, paybw) {
-    const wallet = account.wallet;
-    console.log("run with wallet ", wallet);
-
-    const data = await queryData(wallet);
-    if (!data || data.rows.length === 0)
-        return Math.floor(Date.now() / 1000) + 10;
-
-    let nextAvailability = Math.floor(Date.now() / 1000 + MAX_DELAY);
+async function fetchTools() {
     let tools = [];
-    let assetIds = [];
 
-    for (const row of data.rows) {
-        if (row.current_durability <= REPAIR_IF_DURABILITY_LOWER)
-            tools.push({
-                assetId: row.asset_id,
-                currentDurability: row.current_durability,
-                durability: row.durability,
-                ...account,
-            });
-        if (row.current_durability === 0) continue;
+    for (const account of accounts) {
+        const data = await queryData(account.wallet);
+        tools = tools.concat(
+            data
+                ? data.rows.map((r) => ({ ...toCamelCase(r), ...account }))
+                : []
+        );
+    }
 
-        let assetId = row.asset_id;
-        let difftime = Math.ceil(row.next_availability - Date.now() / 1000);
+    return tools;
+}
+
+function calcNextClaim(tools) {
+    return tools.reduce(function (min, r) {
+        return min >= r.nextAvailability ? r.nextAvailability : min;
+    }, Math.floor(Date.now() / 1000 + MAX_DELAY));
+}
+
+function getClaimableTools(tools) {
+    return tools.filter(
+        (r) => Math.ceil(r.nextAvailability - Date.now() / 1000) <= 0
+    );
+}
+
+function getRepairTools(tools) {
+    return tools.filter(
+        (r) => r.currentDurability <= REPAIR_IF_DURABILITY_LOWER
+    );
+}
+
+async function makeMine(tool, paybw) {
+    console.log("claim with asset_id", tool.assetId);
+    const result = await mine(tool, paybw);
+
+    await delay(1000);
+
+    const reward = await logClaim(result.transaction_id);
+    console.log("Log claim", reward);
+}
+
+function logDurability(tools) {
+    for (const row of tools) {
+        let difftime = Math.ceil(row.nextAvailability - Date.now() / 1000);
 
         console.log(
             "asset_id",
-            assetId,
+            row.assetId,
             "diff",
             difftime,
             "seconds",
             "current durability",
-            row.current_durability
+            row.currentDurability
         );
-
-        if (difftime < 0) assetIds.push(assetId);
-        else if (nextAvailability > row.next_availability)
-            nextAvailability = row.next_availability;
     }
-
-    if (assetIds.length > 0) {
-        for (const assetId of assetIds) {
-            console.log("claim with asset_id", assetId);
-
-            const result = await mine(
-                {
-                    ...account,
-                    assetId,
-                },
-                paybw
-            );
-
-            await delay(1000);
-
-            const reward = await logClaim(result.transaction_id);
-            console.log("Log claim", reward);
-        }
-
-        await delay(1000);
-    }
-
-    return {
-        nextAvailability,
-        tools,
-    };
 }
 
 /*
@@ -281,26 +271,21 @@ async function anotherTask(tools, paybw = null) {
 }
 
 async function main(paybw) {
-    let nextClaim = Math.floor(Date.now() / 1000 + MAX_DELAY);
-    let tools = [];
+    let tools = await fetchTools();
+    logDurability(tools);
 
-    for (const account of accounts) {
-        try {
-            const result = await claim(account, paybw);
-
-            if (nextClaim > result.nextAvailability) {
-                nextClaim = result.nextAvailability;
-            }
-
-            tools = tools.concat(result.tools);
-        } catch (e) {
-            // an error occus
-            console.log("[Error] -", e);
-            nextClaim = Math.floor(Date.now() / 1000) + 1;
-        }
+    let claimable = getClaimableTools(tools);
+    for (const tool of claimable) {
+        await makeMine(tool, paybw);
+        await delay(1000);
     }
 
-    await anotherTask(tools, paybw);
+    const repairTools = getRepairTools(tools);
+    await anotherTask(repairTools, paybw);
+
+    const nextClaim = calcNextClaim(tools);
+    const difftime = Math.ceil(nextClaim - Date.now() / 1000);
+    if (difftime <= 0) return main(paybw);
 
     console.log(
         "Next claim at",
@@ -310,7 +295,7 @@ async function main(paybw) {
         })
     );
 
-    await countdown(nextClaim - Math.floor(Date.now() / 1000));
+    await countdown(difftime);
 }
 
 export default async function () {
@@ -324,6 +309,9 @@ export default async function () {
     while (true) {
         try {
             await main(paybw);
-        } catch {}
+        } catch (e) {
+            // an error occus
+            console.log("[Error] -", e);
+        }
     }
 }
