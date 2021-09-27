@@ -15,11 +15,12 @@ const MAX_RETRIES = 3;
  */
 function makeTransaction(privateKey, actions, paybw = null) {
     const privateKeys = [privateKey];
+    const actionsClone = actions.map(r => r); 
 
     // insert noop action
     if (paybw) {
         privateKeys.push(paybw.privateKey);
-        actions.unshift({
+        actionsClone.unshift({
             account: "boost.wax",
             name: "noop",
             authorization: [
@@ -43,7 +44,7 @@ function makeTransaction(privateKey, actions, paybw = null) {
 
     return api.transact(
         {
-            actions: actions,
+            actions: actionsClone,
         },
         {
             blocksBehind: 3,
