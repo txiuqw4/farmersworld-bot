@@ -275,11 +275,14 @@ async function main(paybw) {
     let tools = await fetchTools();
     logDurability(tools);
 
-    const repairTools = getRepairTools(tools);
-    await anotherTask(repairTools, paybw);
-
     const nextClaim = calcNextClaim(tools);
     const difftime = Math.ceil(nextClaim - Date.now() / 1000);
+
+    if (difftime > 120) {
+        const repairTools = getRepairTools(tools);
+        await anotherTask(repairTools, paybw);
+    }
+
     if (difftime > 0) {
         console.log(
             "Next claim at",
@@ -289,7 +292,8 @@ async function main(paybw) {
             })
         );
 
-        await countdown(difftime);
+        // await countdown(difftime);
+        await delay(difftime * 1000);
     }
 
     let claimable = getClaimableTools(tools);
