@@ -14,6 +14,7 @@ const {
     MINIMUM_FEE,
     MINIMUN_WITHDRAW,
     TIMEZONE,
+    WITHDRAWABLE,
 } = require("./config.json");
 
 function queryData(wallet) {
@@ -257,7 +258,8 @@ async function anotherTask(tools, paybw = null) {
             if (canWithdraw) {
                 const quantities = account.balances.filter((r) => {
                     const amount = parseBalance(r);
-                    return !r.endsWith("GOLD") && amount > MINIMUN_WITHDRAW;
+                    const symbol = r.split(" ")[1];
+                    return amount > MINIMUN_WITHDRAW && WITHDRAWABLE.includes(symbol);
                 });
 
                 if (quantities.length > 0) {

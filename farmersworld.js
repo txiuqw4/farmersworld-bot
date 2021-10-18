@@ -157,7 +157,7 @@ export function cropclaim(inputData, paybw = null) {
 }
 
 /*
- * animal feeding
+ * animal claim
  *
  * @param inputData object {"wallet": "", "privateKey": "", "assetId": ""}
  * @param paybw object {"wallet": "", "privateKey": ""} | null
