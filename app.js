@@ -1,5 +1,6 @@
 import query from "./service/wax-query.js";
 import work from "./work.js";
+import plant from "./plant.js";
 import logs from "./log.js";
 import express from "express";
 import { createRequire } from "module";
@@ -96,3 +97,4 @@ app.listen(port, () => {
 });
 
 work();
+plant();
